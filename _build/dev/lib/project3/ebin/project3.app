@@ -1,0 +1,11 @@
+{application,project3,
+             [{applications,[kernel,stdlib,elixir,logger]},
+              {description,"project3"},
+              {modules,['Elixir.AppSupervisor','Elixir.ChordNode',
+                        'Elixir.ChordNodeCoordinator',
+                        'Elixir.ChordOperations','Elixir.Convert',
+                        'Elixir.FingerTable','Elixir.HashGenerator',
+                        'Elixir.Initalizer','Elixir.KeyGen','Elixir.Math',
+                        'Elixir.Project3']},
+              {registered,[]},
+              {vsn,"0.1.0"}]}.
