@@ -5,27 +5,32 @@ defmodule AppSupervisor do
 	use Supervisor
 
 	def start_link() do
-		Supervisor.start_link(__MODULE__, [], name: :ChordSupervisor)
+		Supervisor.start_link(__MODULE__, [], name: :chord_supervisor)
 	end
 	
+	def start_node(name) do
+		 Supervisor.start_child(:chord_supervisor, [name])
+	end
+
 	def init([]) do
 		children = [
 			worker(ChordNode, [], [restart: :temporary]),
 		]
 		supervise(children, strategy: :simple_one_for_one)
 	end
-	
-	# def shoot(node_id) do
-	# 	 spec = worker(ChordNode, [], [id: node_id, restart: :temporary])
-	# 	 Supervisor.start_child(__MODULE__, spec)
-	# end
+
+	#To get a random child from the supervisor
+	def get_random_child do
+		
+		Enum.random Supervisor.which_children(:chord_supervisor) |> Enum.map( fn item -> elem(item, 1) end)
+	end
 
 	defmodule StabilizerSupervisor do
 		
 		use Supervisor
 
 		def start_link() do
-			Supervisor.start_link(__MODULE__, [], name: :StabilizerSupervisor)
+			Supervisor.start_link(__MODULE__, [], name: :stabilizer_supervisor)
 		end
 		
 		def init([]) do
