@@ -1,8 +1,8 @@
 defmodule ChordNode do
 	use GenServer
 
-	def start_link() do
-		GenServer.start_link(__MODULE__, [])
+	def start_link(name \\ nil) do
+		GenServer.start_link(__MODULE__, nil, [name: name])
 	end
 
 	def init(_) do
@@ -62,6 +62,7 @@ defmodule ChordNode do
 
 		successor = Map.get(state, :successor)
 		fingertable = Map.get(state, :fingertable)
+		current_N = Map.get(pid_N_map, self())
 		# IO.inspect "fingertable = #{inspect fingertable} at #{inspect self()} for key #{inspect key}"
 
 
@@ -72,19 +73,84 @@ defmodule ChordNode do
 										end)
 
 		# IO.puts "At #{inspect self()}"
-		if length(nodes_lesser) != 0 do
-			max_lesser_node = Enum.max nodes_lesser
-			max_lesser_node_pid = pid_N_map |> Enum.find(fn {_, val} -> 
-								               val == max_lesser_node end)
-									  		|> elem(0) 
-			ChordNodeCoordinator.store_key(max_lesser_node_pid, key, pid_N_map)
+
+		if (key == current_N) do
+			
+			IO.puts "Adding to keys list, key == #{key}, successor = #{successor}"
+			ChordNodeCoordinator.add_key(self(), key)	
 		else
-			#If there is no max node less than key, add key to successor list
-			IO.puts "Adding to keys list"
-			successor_pid = pid_N_map |> Enum.find(fn {_, val} -> 
-										 val == successor end)
-									  |> elem(0)
-			ChordNodeCoordinator.add_key(successor_pid, key)
+			if (key > current_N && key <= successor) || 
+				(current_N > successor && (key >= current_N || key <= successor) ) do
+					#If there is no max node less than key and key lies with successor, add key to successor list
+					IO.puts "Adding to keys list, key == #{key}, successor = #{successor}"
+					successor_pid = pid_N_map |> Enum.find(fn {_, val} -> 
+												 val == successor end)
+											  |> elem(0)
+					ChordNodeCoordinator.add_key(successor_pid, key)
+			else
+				if length(nodes_lesser) != 0 do
+					max_lesser_node = Enum.max nodes_lesser
+					IO.puts "Found max_lesser_node = #{max_lesser_node} at current_N = #{current_N}, key == #{key}, successor = #{successor}, fingertable = #{inspect fingertable}"
+					max_lesser_node_pid = pid_N_map |> Enum.find(fn {_, val} -> 
+										               val == max_lesser_node end)
+											  		|> elem(0) 
+					ChordNodeCoordinator.store_key(max_lesser_node_pid, key, pid_N_map)
+				else 
+						#Send key to successor list
+						IO.puts "Sending to successor, key == #{key}, successor = #{successor}"
+						successor_pid = pid_N_map |> Enum.find(fn {_, val} -> 
+													 val == successor end)
+												  |> elem(0)
+						ChordNodeCoordinator.store_key(successor_pid, key, pid_N_map)
+				end
+			end
+		end
+
+		{:noreply, state}
+	end
+
+	def handle_cast({:join, new_node, pid_N_map}, state) do
+
+		successor = Map.get(state, :successor)
+		fingertable = Map.get(state, :fingertable)
+		current_N = Map.get(pid_N_map, self())
+		new_node_pid = pid_N_map |> Enum.find(fn {_, val} -> 
+												 val == new_node end)
+											  |> elem(0)
+	  	successor_pid = pid_N_map |> Enum.find(fn {_, val} -> 
+			 val == successor end)
+	  	|> elem(0)
+		# IO.inspect "fingertable = #{inspect fingertable} at #{inspect self()} for key #{inspect key}"
+
+
+		#All the nodes in the fingertable
+		nodes = Enum.sort(Map.values fingertable)
+
+		nodes_lesser = Enum.filter(nodes, fn x -> x<=new_node 
+										end)
+
+		# IO.puts "At #{inspect self()}"
+
+		if (new_node > current_N && new_node <= successor) || 
+			(current_N > successor && (new_node >= current_N || new_node <= successor) ) do
+				#If there is no max node less than key and key lies with successor, add key to successor list
+			IO.puts "New node added to ring, new_node == #{new_node}, successor = #{successor}"
+				
+			ChordNodeCoordinator.set_successor(new_node_pid, successor)
+			ChordNodeCoordinator.set_predecessor(successor_pid, new_node)
+		else
+			if length(nodes_lesser) != 0 do
+				max_lesser_node = Enum.max nodes_lesser
+				IO.puts "Found max_lesser_node = #{max_lesser_node} at current_N = #{current_N}, new_node == #{new_node}, successor = #{successor}, fingertable = #{inspect fingertable}"
+				max_lesser_node_pid = pid_N_map |> Enum.find(fn {_, val} -> 
+									               val == max_lesser_node end)
+										  		|> elem(0) 
+				ChordNodeCoordinator.join(max_lesser_node_pid, new_node, pid_N_map)
+			else 
+					#Send key to successor list
+					IO.puts "Sending to successor, new_node == #{new_node}, successor = #{successor}"
+					ChordNodeCoordinator.join(successor_pid, new_node, pid_N_map)
+			end
 		end
 
 		{:noreply, state}
@@ -110,6 +176,7 @@ defmodule ChordNodeCoordinator do
 	end
 
 	def set_successor(pid, successor) do
+		IO.inspect "setting #{inspect successor} as successor to pid #{inspect pid}"
 		GenServer.cast(pid, {:set_successor, successor})
 	end
 
@@ -141,6 +208,11 @@ defmodule ChordNodeCoordinator do
 	#Store key is uses chord algorithm to store the key in the correct node
 	def store_key(pid, key, pid_N_map) do
 		GenServer.cast(pid, {:store_key, key, pid_N_map})
+	end
+
+	#Join is used to join a new node to the chord ring
+	def join(pid, new_node, pid_N_map) do
+		GenServer.cast(pid, {:join, new_node, pid_N_map})
 	end
 
 	def lookup(pid) do
