@@ -1,251 +1,256 @@
-			defmodule ChordNode do
-				use GenServer
+defmodule ChordNode do
+	use GenServer
 
-				def start_link(name \\ nil) do
-					GenServer.start_link(__MODULE__, nil, [name: name])
-				end
+	def start_link(name \\ nil) do
+		GenServer.start_link(__MODULE__, nil, [name: name])
+	end
 
-				def init(_) do
-					IO.puts "ChordNode is starting" 
-					state = %{:keys => [], :successor => nil, :predecessor => nil, :fingertable => %{}}
-			    	{:ok, state}
-				end
+	def init(_) do
+		IO.puts "ChordNode is starting" 
+		state = %{:keys => [], :successor => nil, :predecessor => nil, :fingertable => %{}}
+    	{:ok, state}
+	end
 
-				def handle_call(:get_fingertable, _, state) do
-					fingertable = Map.get(state, :fingertable)
-				    {:reply, fingertable, state}
-				end
+	def handle_call(:get_fingertable, _, state) do
+		fingertable = Map.get(state, :fingertable)
+	    {:reply, fingertable, state}
+	end
 
-				def handle_call(:get_successor, _, state) do
-					successor = Map.get(state, :successor)
-				    {:reply, successor, state}
-				end
+	def handle_call(:get_successor, _, state) do
+		successor = Map.get(state, :successor)
+	    {:reply, successor, state}
+	end
 
-				def handle_call(:get_predecessor, _, state) do
-					predecessor = Map.get(state, :predecessor)
-				    {:reply, predecessor, state}
-				end
+	def handle_call(:get_predecessor, _, state) do
+		predecessor = Map.get(state, :predecessor)
+	    {:reply, predecessor, state}
+	end
 
-				def handle_call(:get_keys, _, state) do
-					keys = Map.get(state, :keys)
-				    {:reply, keys, state}
-				end
+	def handle_call(:get_keys, _, state) do
+		keys = Map.get(state, :keys)
+	    {:reply, keys, state}
+	end
 
 
-				def handle_call({:find_successor, search_node, current_node}, _, state) do 
+	def handle_call({:find_successor, search_node, current_node}, _, state) do 
+		
+		successor = Map.get(state, :successor)
+		# IO.puts "successor -- #{successor}, current_node -- #{current_node},search_node -- #{search_node}"
+		fingertable = Map.get(state, :fingertable)
+		nodes = Enum.sort(Map.values fingertable)
+
+		search_node_i = search_node |> Atom.to_string |> String.to_integer
+		current_node_i = current_node |> Atom.to_string |> String.to_integer
+		successor_i = successor |> Atom.to_string |> String.to_integer
+
+		nodes_lesser = Enum.filter(nodes, fn x -> x |> Atom.to_string |> String.to_integer <= search_node_i 
+										end)
+
+		search_result =
+
+			if search_node_i == current_node_i do
+				current_node
+			else
+				if ((search_node_i > current_node_i && search_node_i <= successor_i) || 
+					(current_node_i > successor_i && (search_node_i >= current_node_i || search_node_i <= successor_i) )) do
 					
-					successor = Map.get(state, :successor)
-					# IO.puts "successor -- #{successor}, current_node -- #{current_node},search_node -- #{search_node}"
-					fingertable = Map.get(state, :fingertable)
-					nodes = Enum.sort(Map.values fingertable)
+					successor
+				else
+					if length(nodes_lesser) != 0 do
 
-					search_node_i = search_node |> Atom.to_string |> String.to_integer
-					current_node_i = current_node |> Atom.to_string |> String.to_integer
-					successor_i = successor |> Atom.to_string |> String.to_integer
-
-					nodes_lesser = Enum.filter(nodes, fn x -> x |> Atom.to_string |> String.to_integer <= search_node_i 
-													end)
-
-					search_result =
-
-						if search_node_i == current_node_i do
-							current_node
-						else
-							if ((search_node_i > current_node_i && search_node_i <= successor_i) || 
-								(current_node_i > successor_i && (search_node_i >= current_node_i || search_node_i <= successor_i) )) do
-								
-								successor
-							else
-								if length(nodes_lesser) != 0 do
-
-									nodes_lesser_i = Enum.map nodes_lesser, fn x -> String.to_integer Atom.to_string x end
-									max_lesser_node = Enum.max(nodes_lesser_i) |> Integer.to_string |> String.to_atom
-									# IO.puts "Found max_lesser_node = #{max_lesser_node} at current_node = #{current_node}, search_node == #{search_node}, successor = #{successor}, fingertable = #{inspect fingertable}"
-									ChordNodeCoordinator.find_successor(max_lesser_node, search_node)
-								else 	
-										#Send key to successor list
-										# IO.puts "Sending to successor, search_node == #{search_node}, successor = #{successor}"
-										ChordNodeCoordinator.find_successor(successor, search_node)
-								end
-							end
-						end
-
-				    {:reply, search_result , state}
-				end
-
-				def handle_cast({:set_successor, successor}, state) do
-					new_state = Map.put(state, :successor, successor)
-					#Update the first entry in the fingertable which is the successor
-					fingertable = Map.get(new_state, :fingertable)
-					fingertable = Map.put(fingertable, 0, successor)
-					new_state = Map.put(new_state, :fingertable, fingertable)
-				    {:noreply, new_state}
-				end
-
-				def handle_cast({:set_predecessor, predecessor}, state) do
-					new_state = Map.put(state, :predecessor, predecessor)
-				    {:noreply, new_state}
-				end
-
-				def handle_cast({:set_fingertable, fingertable}, state) do
-					new_state = Map.put(state, :fingertable, fingertable)
-				    {:noreply, new_state}
-				end
-
-				def handle_cast({:add_key, key}, state) do
-					IO.puts "Adding key .."
-					new_state = Map.put(state, :keys, Enum.concat(Map.get(state, :keys), [key]))
-					{:noreply, new_state}
-				end
-
-				def handle_cast({:store_key, key, current_N}, state) do
-
-					successor = Map.get(state, :successor)
-					fingertable = Map.get(state, :fingertable)
-					# IO.inspect "fingertable = #{inspect fingertable} at current_N=#{inspect current_N} for key=#{inspect key}"
-
-					#All the nodes in the fingertable
-					nodes = Enum.sort(Map.values fingertable)
-
-					key_i = key |> Atom.to_string |> String.to_integer
-					current_N_i = current_N |> Atom.to_string |> String.to_integer
-					successor_i = successor |> Atom.to_string |> String.to_integer
-
-					nodes_lesser = Enum.filter(nodes, fn x -> x |> Atom.to_string |> String.to_integer <= key_i 
-													end)
-
-					if (key_i == current_N_i) do
-						
-						IO.puts "Adding to keys list, key == #{key}, successor = #{successor}"
-						ChordNodeCoordinator.add_key(current_N, key)	
-					else
-						if ((key_i > current_N_i && key_i <= successor_i) || 
-							(current_N_i > successor_i && (key_i >= current_N_i || key_i <= successor_i) )) do
-								#If there is no max node less than key and key lies with successor, add key to successor list
-								IO.puts "Adding to keys list, key == #{key}, successor = #{successor}"
-								ChordNodeCoordinator.add_key(successor, key)
-						else
-							if length(nodes_lesser) != 0 do
-									nodes_lesser_i = Enum.map nodes_lesser, fn x -> String.to_integer Atom.to_string x end
-									max_lesser_node = Enum.max(nodes_lesser_i) |> Integer.to_string |> String.to_atom
-									IO.puts "Found max_lesser_node = #{max_lesser_node} at current_N = #{current_N}, key == #{key}, successor = #{successor}, fingertable = #{inspect fingertable}"
-								ChordNodeCoordinator.store_key(max_lesser_node, key)
-							else 
-									#Send key to successor list
-									IO.puts "Sending to successor, key == #{key}, successor = #{successor}"
-									ChordNodeCoordinator.store_key(successor, key)
-							end
-						end
+						nodes_lesser_i = Enum.map nodes_lesser, fn x -> String.to_integer Atom.to_string x end
+						max_lesser_node = Enum.max(nodes_lesser_i) |> Integer.to_string |> String.to_atom
+						# IO.puts "Found max_lesser_node = #{max_lesser_node} at current_node = #{current_node}, search_node == #{search_node}, successor = #{successor}, fingertable = #{inspect fingertable}"
+						ChordNodeCoordinator.find_successor(max_lesser_node, search_node)
+					else 	
+							#Send key to successor list
+							# IO.puts "Sending to successor, search_node == #{search_node}, successor = #{successor}"
+							ChordNodeCoordinator.find_successor(successor, search_node)
 					end
-
-					{:noreply, state}
-				end
-
-				def handle_cast({:join, new_node, current_N}, state) do
-
-					successor = Map.get(state, :successor)
-					fingertable = Map.get(state, :fingertable)
-					# IO.inspect "fingertable = #{inspect fingertable} at #{inspect self()} for key #{inspect key}"
-
-
-					#All the nodes in the fingertable
-					nodes = Enum.sort(Map.values fingertable)
-
-					nodes_lesser = Enum.filter(nodes, fn x -> x<=new_node 
-													end)
-
-					# IO.puts "At #{inspect self()}"
-					new_node_i = new_node |> Atom.to_string |> String.to_integer
-					current_N_i = current_N |> Atom.to_string |> String.to_integer
-					successor_i = successor |> Atom.to_string |> String.to_integer
-
-					if ((new_node_i > current_N_i && new_node_i <= successor_i) || 
-						(current_N_i > successor_i && (new_node_i >= current_N_i || new_node_i <= successor_i)) ) do
-							#If there is no max node less than key and key lies with successor, add key to successor list
-						IO.puts "New node added to ring, new_node == #{new_node}, successor = #{successor}"
-							
-						ChordNodeCoordinator.set_successor(new_node, successor)
-						ChordNodeCoordinator.set_predecessor(successor, new_node)
-					else
-						if length(nodes_lesser) != 0 do
-							nodes_lesser_i = Enum.map nodes_lesser, fn x -> String.to_integer Atom.to_string x end
-							max_lesser_node = Enum.max(nodes_lesser_i) |> Integer.to_string |> String.to_atom
-							# IO.puts "Found max_lesser_node = #{max_lesser_node} at current_N = #{current_N}, new_node == #{new_node}, successor = #{successor}, fingertable = #{inspect fingertable}"
-							ChordNodeCoordinator.join(max_lesser_node, new_node)
-						else 
-								#Send key to successor list
-								# IO.puts "Sending to successor, new_node == #{new_node}, successor = #{successor}"
-								ChordNodeCoordinator.join(successor, new_node)
-						end
-					end
-
-					{:noreply, state}
-				end
-
-				def handle_cast(:lookup, state) do #sets counter when gossip is received
-					
-				    {:noreply, state}
-				end
-
-
-
-				defp terminate(_ \\ 1) do
-				    # IO.inspect :terminating
-				    Process.exit self(), :normal
 				end
 			end
 
-			defmodule ChordNodeCoordinator do
+	    {:reply, search_result , state}
+	end
 
-				def get_successor(nodeN) do
-					GenServer.call(nodeN, :get_successor)
-				end
+	def handle_cast({:set_successor, successor}, state) do
+		new_state = Map.put(state, :successor, successor)
+		#Update the first entry in the fingertable which is the successor
+		fingertable = Map.get(new_state, :fingertable)
+		fingertable = Map.put(fingertable, 0, successor)
+		new_state = Map.put(new_state, :fingertable, fingertable)
+	    {:noreply, new_state}
+	end
 
-				def get_predecessor(nodeN) do
-					GenServer.call(nodeN, :get_predecessor)
-				end
+	def handle_cast({:set_predecessor, predecessor}, state) do
+		new_state = Map.put(state, :predecessor, predecessor)
+	    {:noreply, new_state}
+	end
 
-				def get_fingertable(nodeN) do
-					GenServer.call(nodeN, :get_fingertable)
-				end
+	def handle_cast({:set_fingertable, fingertable}, state) do
+		new_state = Map.put(state, :fingertable, fingertable)
+	    {:noreply, new_state}
+	end
 
-				def set_fingertable(nodeN, fingertable) do
-					GenServer.cast(nodeN, {:set_fingertable,fingertable})
-				end
+	def handle_cast({:add_key, key}, state) do
+		IO.puts "Adding key .."
+		new_state = Map.put(state, :keys, Enum.concat(Map.get(state, :keys), [key]))
+		{:noreply, new_state}
+	end
 
-				def set_predecessor(nodeN, predecessor) do
-					GenServer.cast(nodeN, {:set_predecessor, predecessor})
-				end
+	def handle_cast({:store_key, key, current_N}, state) do
 
-				def set_successor(nodeN, successor) do
-					IO.inspect "setting #{inspect successor} as successor to nodeN #{inspect nodeN}"
-					GenServer.cast(nodeN, {:set_successor, successor})
-				end
+		successor = Map.get(state, :successor)
+		fingertable = Map.get(state, :fingertable)
+		# IO.inspect "fingertable = #{inspect fingertable} at current_N=#{inspect current_N} for key=#{inspect key}"
 
-				def get_keys(nodeN) do
-					GenServer.call(nodeN, :get_keys)
-				end
+		#All the nodes in the fingertable
+		nodes = Enum.sort(Map.values fingertable)
 
-				def find_successor(start_node, search_node) do
-					GenServer.call(start_node, {:find_successor, search_node, start_node})
-				end
+		key_i = key |> Atom.to_string |> String.to_integer
+		current_N_i = current_N |> Atom.to_string |> String.to_integer
+		successor_i = successor |> Atom.to_string |> String.to_integer
 
-				#Just adds the key to the node's key list
-				def add_key(nodeN, key) do
-					GenServer.cast(nodeN, {:add_key, key})
-				end
+		nodes_lesser = Enum.filter(nodes, fn x -> x |> Atom.to_string |> String.to_integer <= key_i 
+										end)
 
-				#Store key is uses chord algorithm to store the key in the correct node
-				def store_key(start_node, key) do
-					GenServer.cast(start_node, {:store_key, key, start_node})
-				end
+		if (key_i == current_N_i) do
+			
+			IO.puts "Adding to keys list, key == #{key}, successor = #{successor}"
+			ChordNodeCoordinator.add_key(current_N, key)	
+		else
 
-				#Join is used to join a new node to the chord ring
-				def join(start_node, new_node) do
-					GenServer.cast(start_node, {:join, new_node, start_node})
-				end
+			if ((key_i > current_N_i && key_i <= successor_i) || 
+				(current_N_i > successor_i && (key_i >= current_N_i || key_i <= successor_i) )) do
+					#If there is no max node less than key and key lies with successor, add key to successor list
+					IO.puts "Adding to keys list, key == #{key}, successor = #{successor}"
+					ChordNodeCoordinator.add_key(successor, key)
+			else
 
-				def lookup(current_node) do
-					GenServer.cast(current_node, :lookup)
+				#Count the hop
+				HopCounter.count
+				
+				if length(nodes_lesser) != 0 do
+						nodes_lesser_i = Enum.map nodes_lesser, fn x -> String.to_integer Atom.to_string x end
+						max_lesser_node = Enum.max(nodes_lesser_i) |> Integer.to_string |> String.to_atom
+						# IO.puts "Found max_lesser_node = #{max_lesser_node} at current_N = #{current_N}, key == #{key}, successor = #{successor}, fingertable = #{inspect fingertable}"
+					ChordNodeCoordinator.store_key(max_lesser_node, key)
+				else 
+						#Send key to successor list
+						# IO.puts "Sending to successor, key == #{key}, successor = #{successor}"
+						ChordNodeCoordinator.store_key(successor, key)
 				end
 			end
+		end
+
+		{:noreply, state}
+	end
+
+	def handle_cast({:join, new_node, current_N}, state) do
+
+		successor = Map.get(state, :successor)
+		fingertable = Map.get(state, :fingertable)
+		# IO.inspect "fingertable = #{inspect fingertable} at #{inspect self()} for key #{inspect key}"
+
+
+		#All the nodes in the fingertable
+		nodes = Enum.sort(Map.values fingertable)
+
+		nodes_lesser = Enum.filter(nodes, fn x -> x<=new_node 
+										end)
+
+		# IO.puts "At #{inspect self()}"
+		new_node_i = new_node |> Atom.to_string |> String.to_integer
+		current_N_i = current_N |> Atom.to_string |> String.to_integer
+		successor_i = successor |> Atom.to_string |> String.to_integer
+
+		if ((new_node_i > current_N_i && new_node_i <= successor_i) || 
+			(current_N_i > successor_i && (new_node_i >= current_N_i || new_node_i <= successor_i)) ) do
+				#If there is no max node less than key and key lies with successor, add key to successor list
+			IO.puts "New node added to ring, new_node == #{new_node}, successor = #{successor}"
+				
+			ChordNodeCoordinator.set_successor(new_node, successor)
+			ChordNodeCoordinator.set_predecessor(successor, new_node)
+		else
+			if length(nodes_lesser) != 0 do
+				nodes_lesser_i = Enum.map nodes_lesser, fn x -> String.to_integer Atom.to_string x end
+				max_lesser_node = Enum.max(nodes_lesser_i) |> Integer.to_string |> String.to_atom
+				# IO.puts "Found max_lesser_node = #{max_lesser_node} at current_N = #{current_N}, new_node == #{new_node}, successor = #{successor}, fingertable = #{inspect fingertable}"
+				ChordNodeCoordinator.join(max_lesser_node, new_node)
+			else 
+					#Send key to successor list
+					# IO.puts "Sending to successor, new_node == #{new_node}, successor = #{successor}"
+					ChordNodeCoordinator.join(successor, new_node)
+			end
+		end
+
+		{:noreply, state}
+	end
+
+	def handle_cast(:lookup, state) do #sets counter when gossip is received
+		
+	    {:noreply, state}
+	end
+
+
+
+	defp terminate(_ \\ 1) do
+	    # IO.inspect :terminating
+	    Process.exit self(), :normal
+	end
+end
+
+defmodule ChordNodeCoordinator do
+
+	def get_successor(nodeN) do
+		GenServer.call(nodeN, :get_successor)
+	end
+
+	def get_predecessor(nodeN) do
+		GenServer.call(nodeN, :get_predecessor)
+	end
+
+	def get_fingertable(nodeN) do
+		GenServer.call(nodeN, :get_fingertable)
+	end
+
+	def set_fingertable(nodeN, fingertable) do
+		GenServer.cast(nodeN, {:set_fingertable,fingertable})
+	end
+
+	def set_predecessor(nodeN, predecessor) do
+		GenServer.cast(nodeN, {:set_predecessor, predecessor})
+	end
+
+	def set_successor(nodeN, successor) do
+		IO.inspect "setting #{inspect successor} as successor to nodeN #{inspect nodeN}"
+		GenServer.cast(nodeN, {:set_successor, successor})
+	end
+
+	def get_keys(nodeN) do
+		GenServer.call(nodeN, :get_keys)
+	end
+
+	def find_successor(start_node, search_node) do
+		GenServer.call(start_node, {:find_successor, search_node, start_node})
+	end
+
+	#Just adds the key to the node's key list
+	def add_key(nodeN, key) do
+		GenServer.cast(nodeN, {:add_key, key})
+	end
+
+	#Store key is uses chord algorithm to store the key in the correct node
+	def store_key(start_node, key) do
+		GenServer.cast(start_node, {:store_key, key, start_node})
+	end
+
+	#Join is used to join a new node to the chord ring
+	def join(start_node, new_node) do
+		GenServer.cast(start_node, {:join, new_node, start_node})
+	end
+
+	def lookup(current_node) do
+		GenServer.cast(current_node, :lookup)
+	end
+end

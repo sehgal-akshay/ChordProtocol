@@ -42,4 +42,25 @@ defmodule AppSupervisor do
 
 	end
 
+	defmodule HopCounterSupervisor do
+		
+		use Supervisor
+
+		def start_link() do
+			Supervisor.start_link(__MODULE__, [], name: :hopcounter_supervisor)
+		end
+		
+		def init([]) do
+			children = [
+				worker(HopCounter, [], [restart: :temporary]),
+			]
+			supervise(children, strategy: :simple_one_for_one)
+		end
+
+		def start_node do
+		 	Supervisor.start_child(:hopcounter_supervisor, [:hopcounter])
+		end
+	end
+
 end
+

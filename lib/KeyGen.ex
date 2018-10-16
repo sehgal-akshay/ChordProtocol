@@ -10,7 +10,7 @@ defmodule KeyGen do
 		Enum.map(1..numKeys, fn _-> 
 					rand_num = :rand.uniform(@val)
 					rand_pid = :c.pid(0, rand_num, 0)
-					do_hash_pid rand_pid, m
+					do_hash_pid(rand_pid, m) |> Integer.to_string |> String.to_atom
 					end)
 
 	end
