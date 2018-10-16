@@ -16,7 +16,7 @@
 		    #########################################
 		    "
 		    :timer.sleep 3000
-		    IO.puts "Initializing chord with #{numNodes} and starting #{numRequests}"
+		    IO.puts "Initializing chord with 2 Nodes and joining #{numNodes-2} nodes and starting #{numRequests}"
 		    :timer.sleep 3000
 		    __init__ numNodes	    
 		end
@@ -36,7 +36,8 @@
 		#Initializing numNodes in one go
 		defp initNnodes(numNodes) do
 			
-			n_values = Enum.map(1..numNodes, fn i -> HashGenerator.hash(@m, Integer.to_string i)|>Integer.to_string|>String.to_atom  end)
+			#Initialize with 2 nodes
+			n_values = Enum.map(1..2, fn i -> HashGenerator.hash(@m, Integer.to_string i)|>Integer.to_string|>String.to_atom  end)
 			Enum.map(n_values, fn n_value -> AppSupervisor.start_node n_value end)
 			child_pids = Supervisor.which_children(:chord_supervisor) |> Enum.map( fn item -> elem(item, 1) end)
 			IO.inspect child_pids
@@ -44,11 +45,15 @@
 			ChordOperations.initializeSuccessors pid_N_map
 			ChordOperations.initializePredecessors pid_N_map
 			__init__stabilizer__ pid_N_map
-			:timer.sleep 10000
 			# Generate numNodes*2 number of keys
 			# ChordOperations.printFingerTables pid_N_map
 			# generateStorePrintKeys numNodes*2, pid_N_map
-			ChordOperations.node_join @m, pid_N_map
+			#Join the remaining numNodes-2 to the chord ring 
+			Enum.reduce(1..numNodes-2, pid_N_map, fn _, acc -> 
+					    {a, b} = ChordOperations.node_join @m, acc 
+				        Map.put acc, a, b
+					    end)
+			:timer.sleep 10000
 		end
 
 		#Join numNodes-1 remaining nodes to the chord ring

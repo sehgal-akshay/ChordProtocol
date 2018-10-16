@@ -33,8 +33,6 @@
 
 				sorted_pid_N_map |> Enum.with_index |>  Enum.each(fn { _ , i} ->
 						
-						IO.puts "#{i+1}, #{map_size(sorted_pid_N_map)}"
-
 						pid = elem(Enum.at(sorted_pid_N_list, i),0)
 						current_N = elem(Enum.at(sorted_pid_N_list, i),1)
 						successor = 
@@ -46,7 +44,6 @@
 						IO.puts "current_pid = #{inspect pid}, current_N=#{current_N}, s=#{successor}"
 						ChordNodeCoordinator.set_successor pid, successor
 				end)
-				printSuccessors pid_N_map
 			end
 
 			def initializePredecessors(pid_N_map) do
@@ -77,11 +74,11 @@
 						IO.puts "current_pid = #{inspect pid}, current_N=#{current_N}, p=#{predecessor}"
 						ChordNodeCoordinator.set_predecessor pid, predecessor
 				end)
-				printPredecessors pid_N_map
 			end
 
 			def node_join(m, pid_N_map) do
 				
+				IO.puts "Joining node to chord ring..."
 				enter_ring_node = elem(Enum.at(pid_N_map,0) ,1)
 				new_node = HashGenerator.hash(m, Integer.to_string(Enum.random 1..(:math.pow(m, 5) |> Kernel.trunc)))
 						   |>Integer.to_string|>String.to_atom
@@ -94,6 +91,7 @@
 				printSuccessors pid_N_map
 				printPredecessors pid_N_map
 				printFingerTables pid_N_map
+				{new_pid, new_node}
 			end
 
 			#Prints all the keys stored in all the nodes in the chord ring as %{node, [keys..]}

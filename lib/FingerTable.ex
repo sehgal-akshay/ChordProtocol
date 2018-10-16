@@ -6,7 +6,7 @@ defmodule FingerTable do
 		nodes = Enum.map(nodes, fn i -> i |> Atom.to_string |> String.to_integer end)
 		IO.puts "nodes == #{inspect nodes}"
 
-		Enum.each pid_N_map, fn {pid, n} ->
+		Enum.each pid_N_map, fn {_, n} ->
 
 				fingertable = Enum.reduce(0..m-1, %{}, fn i, acc->
 					 n = n |> Atom.to_string |> String.to_integer
@@ -21,7 +21,7 @@ defmodule FingerTable do
 					 	end
 					 Map.put acc, i, min_greater_node|>Integer.to_string|>String.to_atom
 				end)
-				ChordNodeCoordinator.set_fingertable(pid, fingertable)
+				ChordNodeCoordinator.set_fingertable(n, fingertable)
 				# IO.inspect fingertable
 		end
 	end
