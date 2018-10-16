@@ -87,7 +87,7 @@ def node_join(m, pid_N_map) do
 	IO.puts "New pid_N_map is #{inspect pid_N_map}, new_pid=#{inspect new_pid}, new_node=#{inspect new_node}"
 	IO.puts "New node joining is #{inspect new_node}"
 	ChordNodeCoordinator.join enter_ring_node, new_node
-	:timer.sleep 4000
+	:timer.sleep 6000
 	printSuccessors pid_N_map
 	printPredecessors pid_N_map
 	printFingerTables pid_N_map
