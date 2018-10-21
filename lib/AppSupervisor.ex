@@ -25,6 +25,11 @@ defmodule AppSupervisor do
 		Enum.random Supervisor.which_children(:chord_supervisor) |> Enum.map( fn item -> elem(item, 1) end)
 	end
 
+	def get_child_count do
+		
+		length Supervisor.which_children(:chord_supervisor)
+	end
+
 	defmodule StabilizerSupervisor do
 		
 		use Supervisor

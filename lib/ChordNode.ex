@@ -150,28 +150,31 @@ defmodule ChordNode do
 
 		successor = Map.get(state, :successor)
 		fingertable = Map.get(state, :fingertable)
-		# IO.inspect "fingertable = #{inspect fingertable} at #{inspect self()} for key #{inspect key}"
-
+		# IO.inspect "fingertable = #{inspect fingertable} at current_node = #{inspect current_N}"
 
 		#All the nodes in the fingertable
 		nodes = Enum.sort(Map.values fingertable)
-
-		nodes_lesser = Enum.filter(nodes, fn x -> x<=new_node 
-										end)
 
 		# IO.puts "At #{inspect self()}"
 		new_node_i = new_node |> Atom.to_string |> String.to_integer
 		current_N_i = current_N |> Atom.to_string |> String.to_integer
 		successor_i = successor |> Atom.to_string |> String.to_integer
 
+		nodes_lesser = Enum.filter(nodes, fn x -> x |> Atom.to_string |> String.to_integer <= new_node_i 
+										end)
+
+		# IO.inspect "fingertable = #{inspect fingertable}, new_node_i = #{inspect new_node_i} , current_node = #{inspect current_N_i}, successor_i = #{successor_i}"
 		if ((new_node_i > current_N_i && new_node_i <= successor_i) || 
 			(current_N_i > successor_i && (new_node_i >= current_N_i || new_node_i <= successor_i)) ) do
 				#If there is no max node less than key and key lies with successor, add key to successor list
-			IO.puts "New node added to ring, new_node == #{new_node}, successor = #{successor}"
 				
+			IO.puts "Node #{inspect new_node} has joined the ring ..."
 			ChordNodeCoordinator.set_successor(new_node, successor)
 			ChordNodeCoordinator.set_predecessor(successor, new_node)
+			# ChordNodeCoordinator.set_successor(current_N, new_node)
 		else
+			# IO.puts "Here................. , new_node == #{new_node}, successor = #{successor}"
+
 			if length(nodes_lesser) != 0 do
 				nodes_lesser_i = Enum.map nodes_lesser, fn x -> String.to_integer Atom.to_string x end
 				max_lesser_node = Enum.max(nodes_lesser_i) |> Integer.to_string |> String.to_atom
@@ -187,12 +190,23 @@ defmodule ChordNode do
 		{:noreply, state}
 	end
 
-	def handle_cast(:lookup, state) do #sets counter when gossip is received
-		
-	    {:noreply, state}
+	def handle_cast({:leave, leaving_node}, state) do
+
+		###### leaving_node is the current node ########
+		successor = Map.get(state, :successor)
+		predecessor = Map.get(state, :predecessor)
+		# IO.inspect "fingertable = #{inspect fingertable} at #{inspect self()} for key #{inspect key}"
+
+		IO.puts "Node is leaving, leaving_node == #{leaving_node}, successor = #{successor}"
+			
+		ChordNodeCoordinator.set_successor(predecessor, successor)
+		ChordNodeCoordinator.set_predecessor(successor, :nil)
+		#Set fields of leaving_node to :nil -> Equivalent to leaving the ring
+		ChordNodeCoordinator.set_successor(leaving_node, :nil)
+		ChordNodeCoordinator.set_predecessor(leaving_node, :nil)
+		terminate()
+		{:noreply, state}
 	end
-
-
 
 	defp terminate(_ \\ 1) do
 	    # IO.inspect :terminating
@@ -250,7 +264,8 @@ defmodule ChordNodeCoordinator do
 		GenServer.cast(start_node, {:join, new_node, start_node})
 	end
 
-	def lookup(current_node) do
-		GenServer.cast(current_node, :lookup)
+	#Join is used to exit a given node from the chord ring
+	def leave(leaving_node) do
+		GenServer.cast(leaving_node, {:leave, leaving_node})
 	end
 end

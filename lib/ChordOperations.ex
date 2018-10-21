@@ -12,12 +12,6 @@ def storeKeys(keys, start_node) do
 	end
 end
 
-#Searches for the given key in the chord ring using chord protocol and finds the node where it is stored
-#Returns nil if search fails
-def searchKey(key) do
-	
-end
-
 def initializeSuccessors(pid_N_map) do
 
 	IO.puts "Initializing successor pointers for all nodes ..."
@@ -80,18 +74,44 @@ def node_join(m, pid_N_map) do
 	
 	IO.puts "Joining node to chord ring..."
 	enter_ring_node = elem(Enum.at(pid_N_map,0) ,1)
-	new_node = HashGenerator.hash(m, Integer.to_string(Enum.random 1..(:math.pow(m, 5) |> Kernel.trunc)))
-			   |>Integer.to_string|>String.to_atom
+	new_node = get_new_node m, pid_N_map
 	{:ok, new_pid} = AppSupervisor.start_node new_node
 	pid_N_map = Map.put pid_N_map, new_pid, new_node
 	IO.puts "New pid_N_map is #{inspect pid_N_map}, new_pid=#{inspect new_pid}, new_node=#{inspect new_node}"
-	IO.puts "New node joining is #{inspect new_node}"
+	IO.puts "-----------------------New node joining is #{inspect new_node}-------------------------"
+
 	ChordNodeCoordinator.join enter_ring_node, new_node
-	:timer.sleep 6000
+	# :timer.sleep 2000
 	printSuccessors pid_N_map
 	printPredecessors pid_N_map
 	printFingerTables pid_N_map
 	{new_pid, new_node}
+end
+
+defp get_new_node(m, pid_N_map) do
+	new_node = HashGenerator.hash(m, Integer.to_string(Enum.random 1..(:math.pow(m, 5) |> Kernel.trunc)))
+			   |>Integer.to_string|>String.to_atom
+
+	if Enum.member? Map.values(pid_N_map), new_node do
+		get_new_node m, pid_N_map
+	else
+		new_node 
+	end  
+end
+
+def node_leave(pid_N_map) do
+	
+	IO.puts "leaving node from chord ring..."
+	random_leaving_node_pid = AppSupervisor.get_random_child
+	random_leaving_node = Map.get pid_N_map, random_leaving_node_pid
+	IO.puts "New pid_N_map is #{inspect pid_N_map}, random_leaving_node=#{inspect random_leaving_node}"
+	IO.puts "Random node leaving is #{inspect random_leaving_node}"
+	ChordNodeCoordinator.leave random_leaving_node
+	# :timer.sleep 2000
+	printSuccessors pid_N_map
+	printPredecessors pid_N_map
+	printFingerTables pid_N_map
+	{random_leaving_node_pid, random_leaving_node}
 end
 
 #Prints all the keys stored in all the nodes in the chord ring as %{node, [keys..]}
@@ -108,7 +128,7 @@ def printKeys(pid_N_map) do
 
 end
 
-#Prints all the fingertables stored in all the nodes in the chord ring as %{node, [keys..]}
+#Prints all the fingertables stored in all the nodes in the chord ring as %{node, fingertable}
 def printFingerTables(pid_N_map) do
 	
 	pids = Map.keys pid_N_map
