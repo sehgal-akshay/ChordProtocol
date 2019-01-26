@@ -1,24 +1,3 @@
-# ChordProtocol
-
-Reference : https://pdos.csail.mit.edu/papers/ton:chord/paper-ton.pdf
-
-Looking to simulate the solution proposed in the paper "Chord: A Scalable Peer-to-peer Lookup Protocol
-for Internet Applications" by Ion Stoica, Robert Morris, David Liben-Nowell, David R. Karger, M. Frans Kaashoek, Frank Dabek, Hari Balakrishnan in Elixir and using the GenServer Supervisor Design model.
-
-Defined Abstract : 
-
-A fundamental problem that confronts peer-to-peer applications is the
-efficient location of the node that stores a desired data item. This paper
-presents Chord, a distributed lookup protocol that addresses this problem.
-Chord provides support for just one operation: given a key, it maps the
-key onto a node. Data location can be easily implemented on top of Chord
-by associating a key with each data item, and storing the key/data pair at
-the node to which the key maps. Chord adapts efficiently as nodes join
-and leave the system, and can answer queries even if the system is continuously
-changing. Results from theoretical analysis and simulations show
-that Chord is scalable: communication cost and the state maintained by
-each node scale logarithmically with the number of Chord nodes
-
 Title : Implementation of Chord Protocol
 
 Command to Start : mix run lib/Initializer.ex 25 3
@@ -26,7 +5,7 @@ Command to Start : mix run lib/Initializer.ex 25 3
 25 - numNodes
 3  - numRequests
 
-Maximum value tested : numNodes = 2000, m = 20. Time taken 1.30m.
+Maximum value tested : numNodes = 2000, m = 20. Time taken 1.30s.
 
 Note : Default m-value (fingertable size) is 20. It should be changed at the top of Initializer.ex and ChordStabilizer.ex files @m 20.
 
@@ -55,23 +34,4 @@ HashGenerator.ex -> This module is responsible for hashing where it will do an s
 ChordOperations.ex -> This module is responsible for all the operations that can be performed on the nodes in the ring like store_key, print etc. This is just an interface to interact with the ring. It will trigger a call/cast on one of the node in the ring at random to do its task. 
 
 KeyGen.ex -> This is a key generator module.
-
-
-
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `project3` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:project3, "~> 0.1.0"}
-  ]
-end
-```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/project3](https://hexdocs.pm/project3).
 

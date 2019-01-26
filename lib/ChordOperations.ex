@@ -149,9 +149,9 @@ def printSuccessors(pid_N_map) do
 	pid_successors_map = 
 			Enum.reduce pids, %{}, fn pid, acc ->
 				successor = ChordNodeCoordinator.get_successor pid
-				IO.puts "pids === #{inspect pid}"
+				# IO.puts "pids === #{inspect pid}"
 				node = Map.get pid_N_map, pid
-				IO.puts "node = #{node}, succ = #{successor}"
+				# IO.puts "node = #{node}, succ = #{successor}"
 				Map.put acc, node, successor
 			end
 	IO.inspect "successors_map = #{inspect pid_successors_map}"
@@ -166,9 +166,9 @@ def printPredecessors(pid_N_map) do
 	pid_predecessors_map = 
 			Enum.reduce pids, %{}, fn pid, acc ->
 				predecessor = ChordNodeCoordinator.get_predecessor pid
-				IO.puts "pids === #{inspect pid}"
+				# IO.puts "pids === #{inspect pid}"
 				node = Map.get pid_N_map, pid
-				IO.puts "node = #{node}, pred = #{predecessor}"
+				# IO.puts "node = #{node}, pred = #{predecessor}"
 				Map.put acc, node, predecessor
 			end
 	IO.inspect "predecessors_map = #{inspect pid_predecessors_map}"

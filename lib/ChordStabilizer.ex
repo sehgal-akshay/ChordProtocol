@@ -1,6 +1,6 @@
 		defmodule ChordStabilizer do
 
-			@m 8
+			@m 20
 
 			use GenServer
 
@@ -54,19 +54,19 @@
 				ChordStabilizerCoordinator.fix_finger successor
 			    {:noreply, state}
 			end
+			
+			# defp fix_finger(current_node, k) do 
 
-			defp fix_finger(current_node, k) do 
+			# 	FingerTable.fix_finger current_node, @m
+			# 	successor = ChordNodeCoordinator.get_successor current_node
 
-				FingerTable.fix_finger current_node, @m
-				successor = ChordNodeCoordinator.get_successor current_node
+			# 	IO.puts "Fix_Finger at node #{inspect current_node}, successor = #{inspect successor}}"
 
-				IO.puts "Fix_Finger at node #{inspect current_node}, successor = #{inspect successor}}"
-
-				if k>1 do
-					#Continue fix_finger after the fix
-					fix_finger successor, k-1
-				end
-			end
+			# 	if k>1 do
+			# 		#Continue fix_finger after the fix
+			# 		fix_finger successor, k-1
+			# 	end
+			# end
 
 			def start(start_node) do
 				

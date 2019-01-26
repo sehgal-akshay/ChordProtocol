@@ -1,6 +1,6 @@
 		defmodule Initalizer do
 
-			@m 8
+			@m 20
 
 			def start do
 				args = System.argv()
@@ -12,10 +12,17 @@
 
 			    		numNodes    : #{numNodes}
 			    		numRequests : #{numRequests}
+			    		m           : #{@m}
 
 			    #########################################
 			    "
 			    :timer.sleep 1000
+			    
+			    if numNodes > :math.pow(2, @m) |> Kernel.trunc do
+			    	
+			    	IO.puts "numNodes is greater than :math.pow(2, m). Please enter numNodes in the range 0 to #{:math.pow(2, @m)}"
+					System.halt		    
+			    end
 			    IO.puts "Initializing chord with 2 Nodes and joining #{numNodes-2} nodes and starting #{numRequests}"
 			    :timer.sleep 1000
 			    __init__ numNodes, numRequests    
@@ -78,19 +85,6 @@
 				
 				FingerTable.generate pid_N_map, @m
 				pid_N_map
-			end
-
-			defp generateStorePrintKeys(numKeys, pid_N_map) do
-				keys = KeyGen.generateKeys numKeys, @m
-				#Get a random node to start
-				start_node = elem(Enum.at(pid_N_map,0) ,1)
-				IO.inspect "generated keys ===== #{inspect keys}"
-				:timer.sleep 1000
-				IO.puts ":store_key in progress ...."
-				ChordOperations.storeKeys keys, start_node
-				:timer.sleep 1000
-				ChordOperations.printKeys pid_N_map
-				HopCounter.print_hop_statistics numKeys
 			end
 
 			defp init_program(numRequests, pid_N_map) do
